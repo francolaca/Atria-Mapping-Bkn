@@ -1,7 +1,7 @@
 Estructura del Proyecto:
 
 app
-    __init__.py
+    __init_.py
     database.py
     models.py
     views.py
@@ -29,6 +29,9 @@ Comando para activar el entorno virtual: source ./venv/Scripts/activate
 comando para instalar dependencias: pip install flask (para instalar flask)
                                     pip install mysql-connector-python (instala una librería que nos permite conectar una aplicación de flask/phyton con una base de datos mySQL)
                                     pip install python-dotenv (librería para manejar variables de entorno)
+                                    pip install flask-cors (librería para solucionar problemas relacionados con CORS. Estos se dan cuando tu aplicación cliente (que se ejecuta en el origen ej http://127.0.0.1:5500) está 
+                                                            tratando de hacer una solicitud a un servidor en un origen diferente (http://127.0.0.1:5000) y el servidor no está configurado 
+                                                            para permitir solicitudes desde el origen del cliente. CORS = Cross-Origin Resource Sharing)
 Comando para ver todas las dependencias instaladas en el entorno virtual: pip freeze 
 Comando para generar/actualizar requirements.txt: pip freeze > requirements.txt
 Comando para leer un archivo requirements.txt e instalar todas las dependencias listadas en él: pip install -r requirements.txt 

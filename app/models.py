@@ -12,7 +12,7 @@ class Muestra:
     inactivas = []
 
     # Método Constructor
-    def __init__(self, id_muestra=None, id_plataforma=None, url_img=None, nombre_img=None, fecha_img=None, ubicación=None, destacado="0", alt_img=None, muestra_activa="1"):
+    def __init__(self, id_muestra=None, id_plataforma=None, url_img=None, nombre_img=None, fecha_img=None, ubicación=None, destacado="0", alt_img=None, muestra_activa="1", nombre_plat=None):
 
         # Atributos de clase (compartidos por todas las instancias)
         Muestra.contador_muestras += 1
@@ -27,12 +27,13 @@ class Muestra:
         self.destacado=destacado
         self.alt_img=alt_img
         self.muestra_activa=muestra_activa
+        self.nombre_plat=nombre_plat
         # Relación de agregación entre Muestra y Usuario (las clases Muestra y Usuario pueden existir independientemente). Lista de usuarios que han descargado esta muestra
         self.usuarios=[]
 
     # Metodo para dar formato de texto a la instancia de la clase (caso contrario las instancias de la case devolverán algo __main__.Muestra object at 0x0000020C38507310> cuando se las llame)
     def __str__(self):
-        return f"id_muestra: {self.id_muestra}, id_plataforma: {self.id_plataforma}, url_img: {self.url_img}, nombre_img: {self.nombre_img}, fecha_img: {self.fecha_img} , ubicación: {self.ubicación}, destacado: {self.destacado}, alt_img: {self.alt_img}, muestra_activa: {self.muestra_activa}"
+        return f"id_muestra: {self.id_muestra}, id_plataforma: {self.id_plataforma}, url_img: {self.url_img}, nombre_img: {self.nombre_img}, fecha_img: {self.fecha_img} , ubicación: {self.ubicación}, destacado: {self.destacado}, alt_img: {self.alt_img}, muestra_activa: {self.muestra_activa}, nombre_plat: {self.nombre_plat}"
 
     # Método para dar formato de diccionario a la instancia de la clase
     def serialize(self):
@@ -45,7 +46,8 @@ class Muestra:
             "ubicación":self.ubicación,
             "destacado":self.destacado,
             "alt_img":self.alt_img,
-            "muestra_activa":self.muestra_activa
+            "muestra_activa":self.muestra_activa,
+            "nombre_plat":self.nombre_plat
         }
     
     # Método estático para obtener todas las muestras de la base de datos. Los metodos estáticos se pueden llamar directamente desde la clase, no necesitan una instancia de la clase para ser ejecutados
@@ -53,7 +55,7 @@ class Muestra:
     def get_all():
         db = get_db()   # Se genera/obtiene una conexion a la base de datos
         cursor = db.cursor()    # Para ejecutar una instrucción SQL necesito implementar un objeto "cursor"
-        # Nos vamos a traer toda la tabla muestras más la "columna" nombre_plat de la tabla plataformas
+        # Traer toda la tabla muestras más la "columna" nombre_plat de la tabla plataformas
         query1 = "SELECT * FROM muestras"    # Variable con la instrucción SQL (seleccionamos la tabla muestras de nuestra db)
         query2 = "SELECT id_plataforma, nombre_plat FROM plataformas"   # Seleccionamos las "columnas" id_plataforma, nombre_plat FROM de nuestra tabla plataformas
         cursor.execute(query1)   # Se ejecuta la instrucción SQL por medio del método execute del objeto cursor
@@ -62,12 +64,13 @@ class Muestra:
         cursor.execute(query2)
         rows_tuples_2 = cursor.fetchall()
         rows_lists_2 = [list(row) for row in rows_tuples_2]
+        rows_lists_1[:] = [row for row in rows_lists_1 if row[8] != 0]  # Quitar muestras inactivas
         # Crear una nueva "columna" en row_lists_1 con los valores correspondientes del campo nombre_plat de la tabla plataformas
-        plataformas = {row[0]: row[1] for row in rows_lists_2}    # Crear un diccionario a partir de rows_lists_2 para facilitar la búsqueda
+        plataformas = {row[0]: row[1] for row in rows_lists_2}  # Crear un diccionario a partir de rows_lists_2 para facilitar la búsqueda
         for row in rows_lists_1:
             if row[1] in plataformas:
                 row.append(plataformas[row[1]])
-        muestras = [Muestra(row[0], row[9], row[2], row[3], row[4], row[5], row[6], row[7], row[8]) for row in rows_lists_1]    # Convertir row_lists_1 en una lista de objetos de la clase Muestra               
+        muestras = [Muestra(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9]) for row in rows_lists_1]    # Convertir row_lists_1 en una lista de objetos de la clase Muestra               
         cursor.close()  # Cerrar el cursor
         return muestras
 

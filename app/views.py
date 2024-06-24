@@ -3,12 +3,7 @@
 # Importamos la función jsonify de la librería flask. Esta función me permite convertir listas y diccionarios de python al formato json y a su vez cuando esto sea devuelto al cliente, va agregar las cabeceras necesarias a la respuesta
 from flask import jsonify
 
-from app.models import Muestra, Movie
-
-# def index():
-#     response = {"message":"Hola Mundo API-REST Flask-Python"}
-#     return jsonify(response)
-
+from app.models import Muestra
 
 def get_all_muestras():
     todas_las_muestras = Muestra.get_all()  # Llamar al método estático get.all() de la clase Muestra
