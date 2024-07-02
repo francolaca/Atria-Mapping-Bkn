@@ -24,25 +24,14 @@ CORS(app)
 
 
 # Registrar una ruta asociada a una vista (asociamos una ruta a una vista). Cuando mi servidor recibe la ruta "/api/muestras" ejecuta la función get_all_muestras. Rutas para el CRUD de la entidad Muestra
-app.route("/api/muestras/",methods=["GET"])(get_all_muestras)
-app.route("/api/muestras/",methods=["GET"])(get_muestra)
-app.route("/api/create/",methods=["GET"])(create_muestra)
-app.route("/api/update/",methods=["GET"])(update_muestra)
-app.route("/api/delete/",methods=["GET"])(delete_muestra)
+app.route("/api/muestras/", methods=["GET"])(get_all_samples)
+app.route("/api/muestras/reload", methods=["GET"])(reload_samples)
+app.route('/api/muestras/<int:id_muestra>', methods=['DELETE'])(delete_sample)
+app.route('/api/muestras/<int:id_muestra>', methods=['GET'])(get_sample)
+app.route('/api/muestras/<int:id_muestra>', methods=['PUT'])(update_sample)
+app.route('/api/muestras/', methods=['POST'])(create_sample)
 
-
-
-
-# Rutas para el CRUD de la entidad Movie
-# app.route('/', methods=['GET'])(index)
-# app.route('/api/movies/', methods=['POST'])(create_movie)
-# app.route('/api/movies/', methods=['GET'])(get_all_movies)
-# app.route('/api/movies/<int:movie_id>', methods=['GET'])(get_movie)
-# app.route('/api/movies/<int:movie_id>', methods=['PUT'])(update_movie)
-# app.route('/api/movies/<int:movie_id>', methods=['DELETE'])(delete_movie)
-
-
-
+app.route("/api/plataformas/", methods=["GET"])(get_all_platforms)
 
 
 # instrucción que permite separar el código que queremos que se ejecute del resto del código (__main__ => hacer click al icono de play o al ejecutar el archivo .py desde la terminal)

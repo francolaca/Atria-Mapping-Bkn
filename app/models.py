@@ -11,6 +11,7 @@ class Muestra:
     # Lista que contiene los id de las muestras inactivas
     inactivas = []
 
+
     # Método Constructor
     def __init__(self, id_muestra=None, id_plataforma=None, url_img=None, nombre_img=None, fecha_img=None, ubicación=None, destacado="0", alt_img=None, muestra_activa="1", nombre_plat=None):
 
@@ -31,9 +32,11 @@ class Muestra:
         # Relación de agregación entre Muestra y Usuario (las clases Muestra y Usuario pueden existir independientemente). Lista de usuarios que han descargado esta muestra
         self.usuarios=[]
 
+
     # Metodo para dar formato de texto a la instancia de la clase (caso contrario las instancias de la case devolverán algo __main__.Muestra object at 0x0000020C38507310> cuando se las llame)
     def __str__(self):
         return f"id_muestra: {self.id_muestra}, id_plataforma: {self.id_plataforma}, url_img: {self.url_img}, nombre_img: {self.nombre_img}, fecha_img: {self.fecha_img} , ubicación: {self.ubicación}, destacado: {self.destacado}, alt_img: {self.alt_img}, muestra_activa: {self.muestra_activa}, nombre_plat: {self.nombre_plat}"
+
 
     # Método para dar formato de diccionario a la instancia de la clase
     def serialize(self):
@@ -49,7 +52,8 @@ class Muestra:
             "muestra_activa":self.muestra_activa,
             "nombre_plat":self.nombre_plat
         }
-    
+
+
     # Método estático para obtener todas las muestras de la base de datos. Los metodos estáticos se pueden llamar directamente desde la clase, no necesitan una instancia de la clase para ser ejecutados
     @staticmethod
     def get_all():
@@ -63,8 +67,7 @@ class Muestra:
         rows_lists_1 = [list(row) for row in rows_tuples_1] # Se generan listas a partir de las tuplas (las listas se pueden editar)
         cursor.execute(query2)
         rows_tuples_2 = cursor.fetchall()
-        rows_lists_2 = [list(row) for row in rows_tuples_2]
-        rows_lists_1[:] = [row for row in rows_lists_1 if row[8] != 0]  # Quitar muestras inactivas
+        rows_lists_2 = [list(row) for row in rows_tuples_2]        
         # Crear una nueva "columna" en row_lists_1 con los valores correspondientes del campo nombre_plat de la tabla plataformas
         plataformas = {row[0]: row[1] for row in rows_lists_2}  # Crear un diccionario a partir de rows_lists_2 para facilitar la búsqueda
         for row in rows_lists_1:
@@ -74,49 +77,105 @@ class Muestra:
         cursor.close()  # Cerrar el cursor
         return muestras
 
+
+    # Método estático para obtener de la base de datos, la muestra con un dado id_muestra que se pasa como parámetro. Si no se encuentra devuelve None.
+    @staticmethod
+    def get_by_id(id_muestra):
+        db = get_db()
+        cursor = db.cursor()
+        query1 = "SELECT * FROM muestras WHERE id_muestra = %s" # Por seguridad (ayuda a prevenir inyecciones SQL), se prefiere el uso de %s y una tupla (id_muestra,) como parámetros frente al uso de f strings
+        query2 = "SELECT id_plataforma, nombre_plat FROM plataformas"
+        cursor.execute(query1, (id_muestra,)) 
+        row_tuple_1 = cursor.fetchone() # Se obtiene la primera fila del resultado de la consulta. Si no hay coincidencias, row_tuple_1 será None.
+        row_list_1 = list(row_tuple_1)
+        cursor.execute(query2)
+        rows_tuples_2 = cursor.fetchall()
+        rows_lists_2 = [list(row) for row in rows_tuples_2]
+        plataformas = {row[0]: row[1] for row in rows_lists_2}
+        if row_list_1[1] in plataformas:
+            row_list_1.append(plataformas[row_list_1[1]])
+        cursor.close()
+        if row_list_1:
+            return Muestra(row_list_1[0], row_list_1[1], row_list_1[2], row_list_1[3], row_list_1[4], row_list_1[5], row_list_1[6], row_list_1[7], row_list_1[8], row_list_1[9])    # Se retorna un objeto de la clase Muestra               
+        return None
+
+
+    @staticmethod 
+    def activate_all():
+        db = get_db()
+        cursor = db.cursor()
+        query = "UPDATE muestras SET muestra_activa = %s" 
+        cursor.execute(query, (1,))
+        db.commit()
+        cursor.close()
+
+
+    # Método para conectarse a la tabla de muestras y hacer un borrado lógico de un registro
+    def delete(self):
+        # Agregamos la muestra a la lista de muestras inactivas
+        if not self.id_muestra in Muestra.inactivas:
+            Muestra.inactivas.append(self.id_muestra)
+            # Inactivamos la muestra en la base de datos:
+            db = get_db()
+            cursor = db.cursor()
+            query = "UPDATE muestras SET muestra_activa = %s, destacado = %s WHERE id_muestra = %s" 
+            cursor.execute(query, (0,0,self.id_muestra,))
+            db.commit()
+            cursor.close()
+
+
+    # Método para conectarse a la tabla de muestras y actualizar un registro existente o insertar uno nuevo
+    def save(self):
+        db = get_db()
+        cursor = db.cursor()
+        if self.id_muestra:
+            query = "UPDATE muestras SET id_plataforma = %s, url_img = %s, nombre_img = %s, fecha_img = %s, ubicación = %s, destacado = %s, alt_img = %s, muestra_activa = %s WHERE id_muestra = %s"
+            cursor.execute(query, (self.id_plataforma, self.url_img, self.nombre_img, self.fecha_img, self.ubicación, self.destacado, self.alt_img, self.muestra_activa, self.id_muestra))
+        else:
+
+            # Buscar el id_plataforma correspondiente al nombre_plat en la tabla plataformas
+            query1 = "SELECT id_plataforma FROM plataformas WHERE nombre_plat = %s"
+            cursor.execute(query1, (self.nombre_plat,))
+            row1 = cursor.fetchone()
+            self.id_plataforma = row1[0]  # Asignar el id_plataforma encontrado
+
+            # Insertar los valores en la tabla muestras, incluyendo el id_plataforma encontrado en la tabla plataformas
+            query2 = "INSERT INTO muestras (id_plataforma, url_img, nombre_img, fecha_img, ubicación, destacado, alt_img, muestra_activa) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+            cursor.execute(query2, (self.id_plataforma, self.url_img, self.nombre_img, self.fecha_img, self.ubicación, self.destacado, self.alt_img, self.muestra_activa))
+            self.id_muestra = cursor.lastrowid  # Obtener el ID del último registro insertado
+
+        db.commit()
+        cursor.close()
+
+
     # Método para agregar un usuario a la lista de usuarios que han descargado esta muestra. Relación de agregación entre Muestra y Usuario (las clases Muestra y Usuario pueden existir independientemente)
     def add_usuario(self, usuario):
         self.usuarios.append(usuario)
+
 
     # Método para mostrar todos los usuarios que han descargado esta muestra
     def show_usuarios(self):
         for usuario in self.usuarios:
             print(usuario)
 
+
     # Método para conectarse a la tabla de muestras e insertar un nuevo registro
     def create(self):
         pass
 
-    # Método para conectarse a la tabla de muestras y borrar un registro
-    def delete(self):
-        pass
 
-    # Metodo para hacer un borrado lógico de la muestra
-    def desactivar(self):
-        if not self.id_muestra in Muestra.inactivas:
-            Muestra.inactivas.append(self.id_muestra)
+    # Método para incluir la muestra en el carrusel de imagenes del sitio web
+    def carousel(self):
+        return ""
+
 
     # Metodo para activar una muestra que está inactiva
     def activar(self):
         if self.id_muestra in Muestra.inactivas:
             Muestra.inactivas.remove(self.id_muestra)
 
-    # muestra1 = Muestra("1", "3", "url1", "Atardecer en el lago", "2020-05-05", "El Calafate", "imagen del Glaciar Perito Moreno", "1")
-    # # print(muestra1.nombre_img)
-    # muestra2 = Muestra("2", "1", "url2", "Valcán violento", "2020-01-05", "Hawái", "imagen volcán en erupción", "1")
-    # # print(muestra2.nombre_img)
-    # muestra3 = Muestra("3", "2", "url3", "Playita", "2018-01-05", "Brasil", "imagen playa", "0")
-    # muestra4 = Muestra("4", "6", "url4", "Peligro Rojo", "2023-03-09", "Rusia", "imagen base militar rusa", "0")
-    # muestra5 = Muestra("5", "4", "url5", "Verde Esmeralda", "2020-12-12", "Costa Rica", "imagen selva", "1")
-    # muestra6 = Muestra("6", "5", "url6", "Efectos Calentamiento Global", "2020-01-05", "Canadá", "imagen glaciar")
 
-    # print(f"Se definieron {Muestra.contador_muestras} instancias de la clase Muestra:")
-    # print(muestra1)  # Al estar definido el método __str__, se muestra el texto que retorna este método
-
-    # muestra1.desactivar()
-
-
-#-----------------------------------------------------------------Clase Plataforma--------------------------------------------------------
+#--------------------------------------------------------------------------------------Clase Plataforma----------------------------------------------------------------------------------------------
 
 
 class Plataforma:
@@ -133,10 +192,12 @@ class Plataforma:
         self.plataforma_activa=plataforma_activa
         # Relación de composición entre Plataforma y Muestra (sin la clase Plataforma, la clase Muestra no existiría). Lista de muestras tomadas por esta plataforma
         self.muestras=[]
-        
+
+
     def __str__(self):
         return f"id_plataforma: {self.id_plataforma}, nombre_plat: {self.nombre_plat}, fabricante: {self.fabricante}, plataforma_activa: {self.plataforma_activa}, muestras: {len(self.muestras)}"
-    
+
+
     def serialize(self):
         return {
             "id_plataforma":self.id_plataforma,
@@ -145,7 +206,21 @@ class Plataforma:
             "plataforma_activa":self.plataforma_activa,
             "muestras":len(self.muestras)
         }
-    
+
+
+    @staticmethod
+    def get_all():
+        db = get_db()    
+        cursor = db.cursor()    
+        query = "SELECT * FROM plataformas"
+        cursor.execute(query)
+        rows_tuples = cursor.fetchall()
+        rows_lists = [list(row) for row in rows_tuples] # Se generan listas a partir de las tuplas (las listas se pueden editar)
+        plataformas = [Plataforma(row[0], row[1], row[2], row[3]) for row in rows_lists]    # Convertir row_lists en una lista de objetos de la clase Plataforma               
+        cursor.close()  # Cerrar el cursor
+        return plataformas
+
+
     # Método para agregar una muestra a la lista de muestras tomadas por la plataforma. Relación de composición entre Plataforma y Muestra (sin la clase Plataforma, la clase Muestra no existiría)
     def add_muestra(self, id_muestra, id_plataforma, url_img, nombre_img, fecha_img, ubicación, destacado, alt_img, muestra_activa):
         # Se crea una instancia de la clase Muestra
@@ -154,41 +229,24 @@ class Plataforma:
         if muestra.id_plataforma == self.id_plataforma:
             self.muestras.append(muestra)
 
+
     # Método para mostrar todas las muestras tomadas por la plataforma
     def show_muestras(self):  
         for muestra in self.muestras:
             print(muestra)
 
+
     def desactivar(self):
         if not self.id_plataforma in Plataforma.inactivas:
             Plataforma.inactivas.append(self.id_plataforma)
+
 
     def activar(self):
         if self.id_plataforma in Plataforma.inactivas:
             Plataforma.inactivas.remove(self.id_plataforma)
 
-# plataforma1 = Plataforma("1", "WORLDVIEW-3", "Ball Aerospace")
-# plataforma2 = Plataforma("2", "WORLDVIEW-2", "Ball Aerospace")
-# plataforma3 = Plataforma("3", "GEOEYE-1", "General Dynamics")
-# plataforma4 = Plataforma("4", "PLÉIADES 1", "EADS Astrium Satellites")
-# plataforma5 = Plataforma("5", "PLANETSCOPE", "Planet Labs")
-# plataforma6 = Plataforma("6", "PLÉIADES NEO", "Airbus")
 
-# plataforma1.add_muestra("2", "1", "url2", "Valcán violento 1", "2020-01-05", "Hawái", "WORLDVIEW-3", "imagen volcán en erupción, día 1", "1")
-# plataforma2.add_muestra("3", "2", "url3", "Playita", "2018-01-05", "Brasil", "WORLDVIEW-2", "imagen playa", "0")
-# plataforma3.add_muestra("1", "3", "url1", "Atardecer en el lago", "2020-05-05", "El Calafate", "GEOEYE-1", "imagen del Glaciar Perito Moreno", "1")
-# plataforma4.add_muestra("5", "4", "url5", "Verde Esmeralda", "2020-12-12", "Costa Rica", "PLÉIADES 1", "imagen selva", "1") 
-# plataforma5.add_muestra("6", "5", "url6", "Efectos Calentamiento Global", "2020-01-05", "Canadá", "PLANETSCOPE", "imagen glaciar") 
-# plataforma6.add_muestra("4", "6", "url4", "Peligro Rojo", "2023-03-09", "Rusia", "PLÉIADES NEO", "imagen base militar rusa", "0")
-# plataforma1.add_muestra("7", "1", "url7", "Valcán violento 2", "2020-01-06", "Hawái", "WORLDVIEW-3", "imagen volcán en erupción, día 2")
-# plataforma1.add_muestra("8", "1", "url8", "Valcán violento 3", "2020-01-07", "Hawái", "WORLDVIEW-3", "imagen volcán en erupción, día 3")   
-
-# plataforma1.show_muestras()
-
-# print(plataforma1)
-
-
-#-----------------------------------------------------------------Clase Usuario--------------------------------------------------------
+#----------------------------------------------------------------------------------------------Clase Usuario-------------------------------------------------------------------------------------
 
 
 class Usuario:
@@ -208,9 +266,11 @@ class Usuario:
         # Relación de agregación entre Usuario y Muestra (las clases Usuario y Muestra pueden existir independientemente). Lista de muestras descargadas por este usuario
         self.muestras=[]
 
+
     def __str__(self):
         return f"id_usuario: {self.id_usuario}, nombre_us: {self.nombre_us}, apellido: {self.apellido}, email: {self.email}, contraseña: {self.contraseña}, usuario_activo: {self.usuario_activo}, descargas: {len(self.muestras)}"
-    
+
+
     def serialize(self):
         return {
             "id_usuario":self.id_usuario,
@@ -222,41 +282,23 @@ class Usuario:
             "descargas":len(self.muestras)
         }
 
+
     # Método para agregar una muestra a la lista de muestras gratis descargadas por el usuario. Relación de agregación entre Usuario y Muestra (las clases Usuario y Muestra pueden existir independientemente)
     def add_muestra(self, muestra):
         self.muestras.append(muestra)
-    
+
+
     # Método para mostrar todas las muestras descargadas por el usuario
     def show_muestras(self):
         for muestra in self.muestras:
             print(muestra)
 
+
     def desactivar(self):
         if not self.id_usuario in Usuario.inactivos:
             Usuario.inactivos.append(self.id_usuario)
 
+
     def activar(self):
         if self.id_usuario in Usuario.inactivos:
             Usuario.inactivos.remove(self.id_usuario)
-
-# usuario1 = Usuario("1", "Carlos", "García", "carlos.garcia@outlook.com", "Abc1234")
-# usuario2 = Usuario("2", "María", "Rodríguez", "maria.rodriguez@gmail.com", "XyZ4567")
-# usuario3 = Usuario("3", "Juan", "Martínez", "juan.martinez@yahoo.com", "QwErTy8")
-# usuario4 = Usuario("4", "Ana", "López", "ana.lopez@hotmail.com", "1a2b3c4d")
-# usuario5 = Usuario("5", "Pedro", "González", "pedro.gonzalez@live.com", "D4E5F6Gh")
-# usuario6 = Usuario("6", "Lucía", "Hernández", "lucia.hernandez@protonmail.com", "gH7iJ8Kl")
-# usuario7 = Usuario("7", "Sofía", "Pérez", "sofia.perez@aol.com", "kL9Mn0Op")
-# usuario8 = Usuario("8", "Miguel", "Sánchez", "miguel.sanchez@icloud.com", "PqRstu12")
-# usuario9 = Usuario("9", "Jorge", "Ramírez", "jorge.ramirez@yandex.com", "vWxYz3")
-# usuario10 = Usuario("10", "Carmen", "Cruz", "carmen.cruz@zoho.com", "2AbCdE4")
-
-# usuario1.add_muestra(plataforma1.muestras[0])
-# usuario1.add_muestra(plataforma1.muestras[1])
-# usuario1.add_muestra(plataforma1.muestras[2])
-
-# usuario1.show_muestras()
-
-# usuario2.desactivar()
-# usuario5.desactivar()
-
-# print(Usuario.inactivos)
